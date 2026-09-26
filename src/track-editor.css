@@ -1,0 +1,47 @@
+#track-editor{position:fixed;inset:0;z-index:16;background:#101b20;color:#ecece5;overflow:auto;font:13px Manrope,"Microsoft YaHei",sans-serif}
+#track-editor header{display:flex;align-items:center;gap:26px;padding:16px 26px;border-bottom:1px solid #ffffff20}
+#track-editor header h1{font-size:25px;font-weight:500;margin:2px 0}
+#track-editor header small{font-size:9px;color:#e4b76c;letter-spacing:.16em}
+#track-editor #editor-state{margin-left:auto;color:#e4b76c;white-space:nowrap}
+#track-editor button{border:1px solid #ffffff2b;padding:9px 13px;background:#213139;color:#e8ece7}
+#track-editor button:hover,#track-editor button.active{border-color:#e4b76c;color:#e4b76c}
+#track-editor button:disabled{opacity:.35;cursor:default}
+#track-editor .editor-toolbar{display:flex;flex-wrap:wrap;gap:8px;padding:12px 25px}
+.editor-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,450px);gap:18px;min-height:640px;padding:0 24px}
+.editor-map{position:relative;min-height:640px;border:1px solid #ffffff24}
+.editor-map canvas{width:100%;height:100%;position:absolute;inset:0;touch-action:none;cursor:crosshair}
+.editor-map-note{position:absolute;left:14px;bottom:12px;font-size:10px;color:#c4d4d4;pointer-events:none}
+.editor-map-note span{color:#9ecfd3}
+.editor-sidebar{padding:0 8px 12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.editor-sidebar label{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.editor-sidebar input{background:#1b2d33;border:1px solid #ffffff37;color:white;padding:8px;min-width:0}
+.editor-sidebar input[type=range]{width:145px;accent-color:#e4b76c}
+.editor-sidebar h2,.editor-library h2{font-size:14px;font-weight:500;color:#e4b76c;margin:8px 0 0}
+.editor-inline,.editor-actions,.editor-launch{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.editor-actions button{flex:1}
+.editor-launch button{flex:1;white-space:nowrap}
+.editor-launch button:last-child{background:#b99963!important;color:#182025!important}
+.editor-sidebar p{margin:0;color:#a9bbc0;font-size:11px;line-height:1.5}
+#editor-stats{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+#editor-stats div{background:#1c2b31;padding:8px;color:#a9bbc0}
+#editor-stats b{display:block;color:#f0e4d0;font-size:15px}
+#editor-issues{display:flex;flex-direction:column;gap:7px;color:#9eb3b8;font-size:12px;min-width:0}
+.editor-issue-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:7px;align-items:center;padding:8px;background:#1d2a30;border-left:2px solid #d79479;min-width:0}
+.editor-issue-row span{white-space:normal;overflow-wrap:anywhere;line-height:1.5}
+.editor-issue-row .issue-locate{padding:6px 8px;color:#abc1c5}
+.editor-issue-row .issue-fix{padding:7px 12px;background:#e4b76c;color:#152127;font-weight:700;white-space:nowrap}
+.editor-issue-row .issue-fix:hover{background:#f2cd8c;color:#101b20}
+.editor-issue-row .issue-manual{color:#a4b7b9;padding:6px 8px;white-space:nowrap}
+#editor-crossings{display:flex;flex-direction:column;gap:5px;color:#9eb3b8;font-size:11px;min-width:0}
+#editor-crossings button{text-align:left;white-space:normal;overflow-wrap:anywhere}
+.editor-library{padding:22px 26px}
+.editor-library>div{display:flex;align-items:center;gap:10px;border-bottom:1px solid #ffffff1e;padding:8px}
+.editor-library span{flex:1}
+.editor-scale{display:grid;grid-template-columns:1fr auto;gap:7px;align-items:center;background:#1b2b31;padding:10px}
+.editor-scale label{font-weight:600;color:#e5cfaa}.editor-scale input{grid-column:1/3;width:100%!important;padding:0!important}.editor-scale small{font-size:10px;color:#9eb3b8;line-height:1.4}.editor-scale button{grid-column:1/3;color:#e4b76c}
+.editor-repair{display:grid;grid-template-columns:1fr auto;gap:7px;align-items:center}
+#editor-repair-all{background:#e4b76c;color:#142027;font-size:14px;font-weight:800;padding:12px}
+#editor-restore-raw{color:#d4d9d5}
+#editor-repair-note{grid-column:1/3;color:#9eb3b8;font-size:10px;line-height:1.4}
+@media(max-width:900px){.editor-layout{grid-template-columns:1fr;padding:0 12px;gap:10px}.editor-map{min-height:50vh}.editor-sidebar{padding:8px 3px 14px}.editor-library{padding:14px}.editor-layout{min-height:0}#track-editor header{padding:12px 14px}#track-editor header h1{font-size:18px}#track-editor .editor-toolbar{padding:10px 14px}}
+@media(max-width:430px){#track-editor .editor-issue-row{grid-template-columns:minmax(0,1fr) auto}.editor-issue-row span{grid-column:1/3}.editor-issue-row .issue-locate{grid-column:1}.editor-issue-row .issue-fix{grid-column:2}.editor-map{min-height:46vh}.editor-sidebar input[type=range]{width:115px}}

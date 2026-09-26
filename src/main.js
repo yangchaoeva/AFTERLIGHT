@@ -18,6 +18,9 @@ import './race-presentation.css';
 import { mountUI,timeString } from './ui.js';
 import { createTrack,wrap01 } from './track.js';
 import {createRegionalWorld} from './regional-world.js';
+import {createCustomWorld} from './custom-world.js';
+import {DesignStore,validateDesign} from './custom-track.js';
+import {TrackEditor} from './track-editor.js';
 import { createCar,updateCar,setCarLightMode,cycleCarLightMode,configureDynamicCarLights } from './vehicle.js';
 import { createWorld } from './world.js';
 import { RaceAudio } from './audio.js';
@@ -33,7 +36,9 @@ import {RaceStats} from './race-stats.js';
 
 const $=mountUI();
 const archive=new RaceArchive({getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value)});
+const designStore=new DesignStore({getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value)});
 let historyScreen,raceSession=null;
+let trackEditor,practiceReturnId=null;
 const settings=readSave('afterlight.settings',{quality:'medium',sound:true,voice:true,dynamicCamera:true,fps:false});
 let state='loading',selectedModel='aurora',paint='#b8d9cf',mode='race',difficulty='normal',theme='day';
 let savedGarage=normalizeGarage(readSave(GARAGE_KEY,{}));selectedModel=savedGarage.selected;paint=savedGarage.colors[selectedModel];
@@ -126,14 +131,16 @@ function setStudioView(view,snap=false){
 }
 
 function saveSession(status){
- if(!raceSession||!player||raceTime<=0)return null;
- return archive.add({id:raceSession.id,startedAt:raceSession.startedAt,finishedAt:new Date().toISOString(),circuit:track.id,mode,difficulty,theme,model:selectedModel,paint,status,rank:status==='finished'?ranking(drivers).indexOf(player)+1:null,rankFinal:drivers.every(d=>d.finishTime!==null),totalTime:player.finishTime??raceTime+player.penalty,penalty:player.penalty,bestLap:player.lapTimes.length?Math.min(...player.lapTimes):null,...stats.snapshot()});
+ if(!raceSession||!player||raceTime<=0||practiceReturnId)return null;
+ return archive.add({id:raceSession.id,startedAt:raceSession.startedAt,finishedAt:new Date().toISOString(),circuit:track.id,circuitName:track.name,mode,difficulty,theme,model:selectedModel,paint,status,rank:status==='finished'?ranking(drivers).indexOf(player)+1:null,rankFinal:drivers.every(d=>d.finishTime!==null),totalTime:player.finishTime??raceTime+player.penalty,penalty:player.penalty,bestLap:player.lapTimes.length?Math.min(...player.lapTimes):null,...stats.snapshot()});
 }
 function openHistory(){historyScreen.open();state='history';show('menu',false);show('toast',false);keys.clear();}
 function closeHistory(){historyScreen.close();state='menu';show('menu');$('open-history').focus();}
 
 function returnMenu(){
+ const editorId=practiceReturnId;
  if(player&&player.finishTime===null)saveSession('retired');raceSession=null;
+ practiceReturnId=null;
  raceIntro?.dispose();raceIntro=null;
  state='menu';hideModals();show('hud',false);show('studio',false);show('menu');
  controls.enabled=false;carMeshes.forEach(disposeCar);carMeshes=[];drivers=[];player=null;cockpit=null;finishSequence=null;show('finish-cinema',false);camera.layers.set(0);camera.layers.enable(1);camera.near=.12;
@@ -147,6 +154,7 @@ function returnMenu(){
  scene.fog=new THREE.FogExp2('#b6c4cb',.00023);
  heroCar.visible=true;positionHero();keys.clear();audio.pause();camera.fov=43;camera.updateProjectionMatrix();menuCamera(1,true);
  tireFX.reset();
+ if(editorId){openTrackEditor(designStore.get(editorId),true);}
 }
 function hideModals(){['race-modal','settings-modal','pause-modal','result-modal'].forEach(id=>show(id,false));}
 
@@ -166,8 +174,40 @@ function drawMap(canvas,vehicles=[],mapTrack=track){
  }
 }
 
+function createSelectedTrack(id){
+ if(!id.startsWith('custom-'))return createTrack(id);
+ const design=designStore.get(id);
+ if(!design)throw Error('这条玩家赛道已不存在');
+ const result=validateDesign(design);
+ if(result.status==='draft')throw Error('这条草稿还不能驾驶，请先修正标记的问题');
+ const definition={id,name:design.name,english:'PLAYER CIRCUIT',tag:'玩家手绘',description:`你绘制的 ${result.length} 米闭环赛道 · ${result.crossings.length} 处立体交叉`,knots:result.centerline,width:design.width,checkpoints:Math.max(12,Math.min(30,Math.floor(result.length/120))),sampleCount:Math.max(900,Math.min(3600,Math.ceil(result.length/2))),slopeGravity:true};
+ const custom=createTrack(definition);custom.customStatus=result.status;custom.design=design;custom.crossings=result.crossings;return custom;
+}
+
+function syncCustomCircuits(changedId=null){
+ if(changedId&&circuitCache.has(changedId)){
+   if(track?.id===changedId)selectCircuit('harbor');
+   const entry=circuitCache.get(changedId);entry.world.dispose?.();circuitCache.delete(changedId);
+ }
+ const select=$('circuit'),previous=select.value;
+ select.querySelectorAll('option[data-custom]').forEach(option=>option.remove());
+ for(const design of designStore.items){
+   const result=validateDesign(design);if(result.status==='draft')continue;
+   const option=document.createElement('option');option.value=design.id;option.dataset.custom='';option.textContent=`玩家创作 · ${design.name}`;select.append(option);
+ }
+ select.value=[...select.options].some(o=>o.value===previous)?previous:'harbor';
+}
+
+function openTrackEditor(design=null,preserve=false){
+ hideModals();show('menu',false);show('hud',false);show('toast',false);keys.clear();state='editor';
+ if(preserve&&design)trackEditor.resume(design);else trackEditor.open(design);
+}
+
 function circuitBrief(){
- const preview=createTrack($('circuit').value);
+ const preview=createSelectedTrack($('circuit').value);
+ const raceOption=$('mode').querySelector('option[value="race"]');raceOption.disabled=preview.customStatus==='drive';
+ if(raceOption.disabled&&$('mode').value==='race')$('mode').value='time';
+ $('difficulty').disabled=$('mode').value==='time';
  $('race-title').textContent=`下一站，${preview.name}。`;
  $('brief-distance').textContent=`${(preview.length/1000).toFixed(2)} KM · ${$('mode').value==='time'?1:2} 圈`;
  $('circuit-description').textContent=preview.description;
@@ -179,13 +219,14 @@ function circuitBrief(){
 }
 
 function buildCircuitWorld(nextTrack){
+ if(nextTrack.id.startsWith('custom-'))return createCustomWorld(scene,renderer,nextTrack,designStore.get(nextTrack.id));
  if(nextTrack.id!=='coast')return createRegionalWorld(scene,renderer,nextTrack);
  const prior=new Set(scene.children),next=createWorld(scene,renderer,nextTrack);next.root=new THREE.Group();next.root.name=nextTrack.english;[...scene.children].filter(c=>!prior.has(c)).forEach(c=>next.root.add(c));scene.add(next.root);return next;
 }
 
 function selectCircuit(id){
  if(!circuitCache.has(id)){
-   const nextTrack=createTrack(id),nextWorld=buildCircuitWorld(nextTrack);
+   const nextTrack=createSelectedTrack(id),nextWorld=buildCircuitWorld(nextTrack);
    nextWorld.sunLight.shadow.camera.layers.enable(1);
    circuitCache.set(id,{track:nextTrack,world:nextWorld});
  }
@@ -208,6 +249,8 @@ function finishIntro(){
 }
 
 function setupRace(){
+ const selectedDesign=designStore.get($('circuit').value);
+ if(selectedDesign){const result=validateDesign(selectedDesign);if(result.status==='draft'||$('mode').value==='race'&&!result.raceReady){toast('这条赛道尚未通过当前模式的检查，请回到编辑器修正。',5);return;}}
  if(player&&player.finishTime===null)saveSession('retired');
  raceSession={id:crypto.randomUUID(),startedAt:new Date().toISOString()};
  raceIntro?.dispose();raceIntro=null;
@@ -307,7 +350,7 @@ function finishRace(){
  const entry=saveSession('finished');finishSequence.record=entry;
  const badge=$('record-badge');badge.hidden=!entry?.newRecord;
  if(entry?.newRecord){badge.innerHTML=`${entry.newRecord==='improved'?'↗ 新纪录':'首条纪录'} <small>${entry.newRecord==='improved'?`提升 ${timeString(entry.improvement)}`:'本组首次完赛'} · 同车型 / 同比赛条件</small>`;$('finish-status').textContent+=entry.newRecord==='improved'?' / NEW RECORD':' / FIRST RECORD';}
- $('record-note').textContent=`${entry?.previousBest?'此前最佳 '+timeString(entry.previousBest):'首次建立本组成绩'} · ${VEHICLES[selectedModel].name} · ${player.penalty?`罚时 ${player.penalty} 秒已计入总成绩`:'无复位罚时'}${archive.error?' · 本地保存失败':''}。`;
+ $('record-note').textContent=practiceReturnId?'自由试驾不计入本地成绩；返回后可以继续修改这条赛道。':`${entry?.previousBest?'此前最佳 '+timeString(entry.previousBest):'首次建立本组成绩'} · ${VEHICLES[selectedModel].name} · ${player.penalty?`罚时 ${player.penalty} 秒已计入总成绩`:'无复位罚时'}${archive.error?' · 本地保存失败':''}。`;
  renderResults();
 }
 function revealResults(){if(!finishSequence)return;finishSequence.showResults=true;finishSequence.time=Math.max(9,finishSequence.time);show('hud',false);show('finish-cinema',false);show('result-modal');$('record-badge').classList.remove('record-pop');void $('record-badge').offsetWidth;$('record-badge').classList.add('record-pop');renderResults();}
@@ -475,6 +518,8 @@ async function exportModel(){
 function bindUI(){
  $('play').onclick=$('nav-race').onclick=()=>{show('race-modal');circuitBrief();};
  $('circuit').onchange=circuitBrief;
+ $('create-track').onclick=()=>openTrackEditor();
+ $('my-tracks').onclick=()=>openTrackEditor(designStore.items[0]||null);
  $('showroom').onclick=$('nav-studio').onclick=openStudio;
  $('open-garage').onclick=$('studio-choose').onclick=()=>openGarage();
  $('open-history').onclick=openHistory;
@@ -493,6 +538,7 @@ function bindUI(){
  $('theme').onchange=()=>{const value=$('theme').value;$('brief-atmosphere').textContent=value==='night'?'夜间路面 · 霓虹潮汐':value==='random'?'昼夜随机 · 每次不同':'干燥路面 · 黄金时刻';};
  for(const [id,key] of [['quality','quality'],['sound-enabled','sound'],['voice-enabled','voice'],['dynamic-camera','dynamicCamera'],['show-fps','fps']])$(id).onchange=()=>{settings[key]=id==='quality'?$(id).value:$(id).checked;syncSettings();writeSave('afterlight.settings',settings);};
  window.addEventListener('keydown',e=>{
+   if(state==='editor')return;
    if(state==='history'){if(e.code==='Escape'){e.preventDefault();closeHistory();}return;}
    if(state==='intro'&&['Space','Enter','Escape'].includes(e.code)){e.preventDefault();raceIntro.skip();return;}
    if(['SELECT','INPUT','TEXTAREA'].includes(document.activeElement?.tagName))return;
@@ -576,6 +622,17 @@ async function boot(){
    selectCar(selectedModel);setPaint(paint);
    garage=new Garage(renderer,studioEnvironment,{onCancel:()=>{returnMenu();if(garageReturn==='studio')openStudio();},onConfirm:saved=>{savedGarage=saved;writeSave(GARAGE_KEY,saved);paint=saved.colors[saved.selected];selectCar(saved.selected);setPaint(paint);returnMenu();show('race-modal');circuitBrief();}});
    historyScreen=new HistoryScreen(archive,closeHistory);
+   trackEditor=new TrackEditor(designStore,{
+     onBack:()=>{state='menu';show('menu');menuCamera(1,true);},
+     onSave:(design,result,deletedId)=>{syncCustomCircuits(design?.id||deletedId||null);historyScreen?.render();},
+     onLaunch:(design,result,launchMode)=>{
+       syncCustomCircuits(design.id);$('circuit').value=design.id;
+       $('mode').value=launchMode==='race'?'race':'time';
+       practiceReturnId=launchMode==='practice'?design.id:null;
+       state='menu';setupRace();
+     },
+   });
+   syncCustomCircuits();
    syncSettings();bindUI();
    selectCircuit('harbor');
    $('brief-distance').textContent=`${(track.length/1000).toFixed(2)} KM · 2 圈`;

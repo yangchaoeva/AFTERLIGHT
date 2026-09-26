@@ -134,6 +134,7 @@ export function aiControls(d,track,drivers,difficulty='normal') {
 export function resolveCars(drivers,track,dt) {
   for(let i=0;i<drivers.length;i++)for(let j=i+1;j<drivers.length;j++){
     const a=drivers[i],b=drivers[j];
+    if(Math.abs(a.position.y-b.position.y)>3.5)continue;
     const dx=b.position.x-a.position.x,dz=b.position.z-a.position.z;
     const sa=getVehicle(a.model),sb=getVehicle(b.model);
     if(dx*dx+dz*dz>((sa.length+sb.length)/2+sa.halfWidth+sb.halfWidth)**2)continue;

@@ -1,0 +1,28 @@
+import {chromium} from '@playwright/test';
+import fs from 'node:fs/promises';
+
+const base=process.argv[2]||'http://127.0.0.1:5174/';
+const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args:['--enable-webgl','--ignore-gpu-blocklist','--disable-gpu-sandbox','--no-sandbox']});
+const page=await browser.newPage({viewport:{width:1440,height:900},deviceScaleFactor:1});
+const errors=[];page.on('pageerror',error=>errors.push(error.message));
+const raw=[[-75,-50],[75,-50],[75,40],[-50,40],[-65,30],[-47,35],[-65,22],[-47,27],[-62,15],[-47,20],[-57,5],[-50,-10],[-25,-10]].map(([x,z])=>[x*.75,z*.75]);
+const design={version:1,id:`custom-${crypto.randomUUID()}`,name:'自动发车区验证',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),raw,closed:false,width:12,terrain:[],overrides:{},smooth:.22};
+const load=async value=>page.locator('#editor-file').setInputFiles({name:'grid.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(value))});
+await fs.mkdir('artifacts/custom-track',{recursive:true});
+await page.goto(`${base}?qa`,{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.__afterlight?.state==='menu',{timeout:60000});
+await page.locator('#play').click();await page.locator('#create-track').click();await load(design);
+await page.locator('#editor-repair-all').click();const auto={status:await page.locator('#editor-state').innerText(),raceEnabled:await page.locator('#editor-race').isEnabled(),issues:await page.locator('#editor-issues').innerText()};
+if(!auto.raceEnabled)throw Error(`one-click did not prepare the grid: ${auto.issues}`);
+await page.locator('#editor-save').click();const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('afterlight.player-tracks.v1'))[0]);
+const at=saved.route.length-18,misplaced={...saved,id:`custom-${crypto.randomUUID()}`,name:'单项发车区修复',route:[...saved.route.slice(at),...saved.route.slice(0,at)],certification:null};
+await load(misplaced);const before=await page.locator('#editor-issues').innerText();
+await page.locator('.editor-issue-row').filter({hasText:'发车区没有足够'}).locator('.issue-fix').click();
+const single={status:await page.locator('#editor-state').innerText(),raceEnabled:await page.locator('#editor-race').isEnabled(),issues:await page.locator('#editor-issues').innerText()};
+if(!single.raceEnabled)throw Error(`single grid fix did not prepare the grid: ${single.issues}`);
+await page.screenshot({path:'artifacts/custom-track/grid-repaired.png'});
+await page.locator('#editor-race').click();await page.waitForFunction(()=>window.__afterlight?.state==='intro',{timeout:120000});await page.keyboard.press('Space');await page.waitForFunction(()=>window.__afterlight?.state==='racing',{timeout:20000});
+const first=await page.evaluate(()=>window.__afterlight.telemetry),launch=await page.evaluate(()=>window.__afterlight.qaDrive(3)),after=await page.evaluate(()=>window.__afterlight.qaDrive(5));
+if(after.drivers.length!==8||after.drivers.filter(driver=>driver.progress>0).length<6)throw Error('eight-car start did not advance');
+await page.screenshot({path:'artifacts/custom-track/grid-eight-car-race.png'});
+console.log(JSON.stringify({auto,single,race:{drivers:after.drivers.length,advanced:after.drivers.filter(driver=>driver.progress>0).length,firstSpeed:first.drivers.map(driver=>driver.speed),launchCollisions:launch.drivers.map(driver=>driver.collisionCooldown),raceTime:after.raceTime,collisionCooldowns:after.drivers.map(driver=>driver.collisionCooldown)},errors},null,2));
+await browser.close();if(errors.length)process.exitCode=1;

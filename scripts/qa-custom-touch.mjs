@@ -1,0 +1,18 @@
+import {chromium} from '@playwright/test';
+import fs from 'node:fs/promises';
+const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args:['--enable-webgl','--ignore-gpu-blocklist','--disable-gpu-sandbox','--no-sandbox']});
+const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1,hasTouch:true,isMobile:true});
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.goto(`${process.env.AFTERLIGHT_QA_URL||'http://127.0.0.1:4180/'}?qa`);await page.waitForFunction(()=>window.__afterlight?.state==='menu',{timeout:60000});
+await page.locator('#play').click();await page.locator('#create-track').click();
+const b=await page.locator('#editor-canvas').boundingBox(),cx=b.x+b.width/2,cy=b.y+b.height/2,cdp=await page.context().newCDPSession(page);
+const point=t=>({x:cx+Math.min(140,b.width*.36)*Math.cos(t),y:cy+Math.min(100,b.height*.24)*Math.sin(t),id:1});
+await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[point(0)]});
+for(let i=1;i<=120;i++)await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[point(i/120*2*Math.PI)]});
+await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+await page.locator('#editor-close-loop').click();
+await fs.mkdir('artifacts/custom-track',{recursive:true});await page.screenshot({path:'artifacts/custom-track/mobile-editor.png',fullPage:true});
+console.log({raw:await page.evaluate(()=>document.querySelector('#track-editor')?.hidden?0:window.__afterlight?.state),status:await page.locator('#editor-state').innerText(),buttons:await page.locator('#editor-drive').isEnabled(),errors});
+await page.locator('#editor-save').click();await page.locator('#editor-drive').click();await page.waitForFunction(()=>window.__afterlight?.state==='intro',{timeout:120000});
+console.log('touch-drive',await page.evaluate(()=>({id:window.__afterlight.track.id,raw:JSON.parse(localStorage.getItem('afterlight.player-tracks.v1'))[0].raw.length})));
+await browser.close();if(errors.length)process.exitCode=1;

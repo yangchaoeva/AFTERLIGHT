@@ -1,0 +1,46 @@
+import {chromium} from '@playwright/test';
+import fs from 'node:fs/promises';
+
+const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args:['--enable-webgl','--ignore-gpu-blocklist','--disable-gpu-sandbox','--no-sandbox']});
+const page=await browser.newPage({viewport:{width:1440,height:900},deviceScaleFactor:1});
+const errors=[];page.on('pageerror',error=>errors.push(error.message));
+await page.goto(`${process.env.AFTERLIGHT_QA_URL||'http://127.0.0.1:4180/'}?qa`,{waitUntil:'domcontentloaded'});
+await page.waitForFunction(()=>window.__afterlight?.state==='menu',{timeout:60000});
+await page.locator('#play').click();await page.locator('#create-track').click();
+const box=await page.locator('#editor-canvas').boundingBox();
+const cx=box.x+box.width/2,cy=box.y+box.height/2;
+await page.mouse.move(cx+240,cy);await page.mouse.down();
+for(let i=1;i<=160;i++){const t=2*Math.PI*i/160;await page.mouse.move(cx+240*Math.cos(t),cy+150*Math.sin(t));}
+await page.mouse.up();await page.locator('#editor-close-loop').click();
+console.log('editor',await page.locator('#editor-state').innerText(),await page.locator('#editor-stats').innerText(),await page.locator('#editor-issues').innerText());
+await fs.mkdir('artifacts/custom-track',{recursive:true});await page.screenshot({path:'artifacts/custom-track/editor.png'});
+await page.locator('#editor-save').click();const id=await page.evaluate(()=>JSON.parse(localStorage.getItem('afterlight.player-tracks.v1'))[0].id);
+await page.locator('#editor-drive').click();await page.waitForFunction(()=>window.__afterlight?.state==='intro',{timeout:120000});
+console.log('intro',await page.evaluate(()=>window.__afterlight.track));await page.screenshot({path:'artifacts/custom-track/intro.png'});
+await page.locator('#intro-skip').click();await page.waitForFunction(()=>window.__afterlight?.state==='racing',{timeout:30000});
+await page.screenshot({path:'artifacts/custom-track/drive.png'});
+await page.keyboard.press('Escape');await page.locator('#quit').click();
+console.log('return',await page.evaluate(()=>({editor:!document.querySelector('#track-editor').hidden,raw:JSON.parse(localStorage.getItem('afterlight.player-tracks.v1'))[0].raw.length,id:window.__afterlight.track.id})),errors);
+await page.screenshot({path:'artifacts/custom-track/return.png'});
+const eight={version:1,id:`custom-${crypto.randomUUID()}`,name:'八字立交试验线',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),raw:Array.from({length:500},(_,i)=>{const t=2*Math.PI*i/500+1.2;return [300*Math.sin(t),170*Math.sin(2*t)];}),closed:true,width:12,terrain:[{type:'lake',points:[[-120,-60],[120,-60],[120,60],[-120,60]]}],overrides:{},smooth:.22};
+await page.locator('#editor-file').setInputFiles({name:'eight.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(eight))});
+console.log('eight-editor',await page.locator('#editor-state').innerText(),await page.locator('#editor-crossings').innerText(),await page.locator('#editor-issues').innerText());
+await page.screenshot({path:'artifacts/custom-track/eight-editor.png'});
+const buildAt=Date.now();await page.locator('#editor-race').click();await page.waitForFunction(()=>window.__afterlight?.state==='intro',{timeout:120000});console.log('certify-and-build-ms',Date.now()-buildAt);
+const eightSavedId=await page.evaluate(()=>window.__afterlight.track.id);
+console.log('eight-intro',await page.evaluate(()=>({track:window.__afterlight.track,drivers:window.__afterlight.telemetry.drivers.length})));
+await page.screenshot({path:'artifacts/custom-track/eight-intro.png'});
+await page.locator('#intro-skip').click();await page.waitForFunction(()=>window.__afterlight?.state==='racing',{timeout:30000});
+await page.evaluate(()=>window.__afterlight.qaLocate(.5));await page.screenshot({path:'artifacts/custom-track/eight-drive.png'});
+await page.evaluate(()=>window.__afterlight.qaLocate(.285));await page.screenshot({path:'artifacts/custom-track/eight-bridge-upper.png'});
+await page.evaluate(()=>window.__afterlight.qaLocate(.79));await page.screenshot({path:'artifacts/custom-track/eight-bridge-lower.png'});
+console.log('eight-runtime',await page.evaluate(()=>({drivers:window.__afterlight.telemetry.drivers.length,drawCalls:window.__afterlight.telemetry.drawCalls,triangles:window.__afterlight.telemetry.triangles,errors:[]})));
+await page.waitForTimeout(1300);console.log('headless-fps',await page.locator('#fps').innerText());
+await page.reload();await page.waitForFunction(()=>window.__afterlight?.state==='menu',{timeout:60000});await page.locator('#play').click();
+console.log('reload',await page.locator('#circuit option[data-custom]').allTextContents(),errors);
+await page.locator('#circuit').selectOption(eightSavedId);await page.locator('#theme').selectOption('night');await page.locator('#mode').selectOption('race');
+await page.locator('#start-race').click();await page.waitForFunction(()=>window.__afterlight?.state==='intro',{timeout:120000});await page.locator('#intro-skip').click();await page.waitForFunction(()=>window.__afterlight?.state==='racing',{timeout:30000});
+const finish=await page.evaluate(()=>window.__afterlight.qaDrive(250));
+console.log('finish',finish.state,finish.theme,finish.drivers.map(d=>[d.lap,d.finishTime]),await page.evaluate(()=>JSON.parse(localStorage.getItem('afterlight.history.v1')||'[]').filter(x=>x.circuit===window.__afterlight.track.id).length));
+if(finish.state==='finishing'||finish.state==='finished'){await page.locator('#skip-cinema').click();await page.waitForTimeout(750);await page.screenshot({path:'artifacts/custom-track/eight-results.png',animations:'disabled'});}
+await browser.close();if(errors.length)process.exitCode=1;

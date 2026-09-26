@@ -26,7 +26,7 @@ export class RaceIntro{
   if(!ui){ui=document.createElement('section');ui.id='race-intro';ui.innerHTML=`<div class="intro-top"><span>AFTERLIGHT <b> / COURSE RECON</b></span><button id="intro-skip">跳过航拍 ↗ <small>SPACE / ENTER</small></button></div><div class="intro-title"><div class="intro-eyebrow"></div><h1></h1><p></p><div class="intro-facts"></div></div><div class="intro-bottom"><span id="intro-shot"></span><div class="intro-timeline"><i></i></div><span id="intro-time"></span></div>`;document.getElementById('app').append(ui);}
   this.ui=ui;ui.hidden=false;ui.querySelector('h1').textContent=track.name;ui.querySelector('.intro-eyebrow').textContent=`${track.english} / ${theme==='night'?'NIGHT EDITION':'GOLDEN HOUR'}`;
   ui.querySelector('p').textContent=track.description;
-  const level={coast:'入门 · 流畅长弯',harbor:'进阶 · 城区复合弯',mountain:'挑战 · 高差连续弯'}[track.id];
+  const level={coast:'入门 · 流畅长弯',harbor:'进阶 · 城区复合弯',mountain:'挑战 · 高差连续弯'}[track.id]||'玩家设计 · 自由路线';
   const difficultyLabel=mode==='time'?'无对手':({easy:'简单',normal:'标准',hard:'困难'}[difficulty]);
   ui.querySelector('.intro-facts').innerHTML=[['赛道难度',level],['比赛模式',mode==='time'?'单圈计时':'八车竞速 · 两圈'],['对手难度',difficultyLabel],['赛道长度',`${(track.length/1000).toFixed(2)} KM`],['垂直高差',`${Math.round(track.elevation)} M`]].map(([a,b])=>`<div><small>${a}</small><strong>${b}</strong></div>`).join('');
   ui.querySelector('#intro-skip').onclick=()=>this.skip();
