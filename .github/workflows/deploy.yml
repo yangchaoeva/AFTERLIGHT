@@ -33,6 +33,8 @@ jobs:
       - name: Run tests
         run: npm test
       - name: Build for GitHub Pages
+        env:
+          VITE_LEADERBOARD_API_URL: ${{ vars.LEADERBOARD_API_URL || 'https://afterlight-leaderboard.afterlight-racing.workers.dev' }}
         run: npm run build -- --base /AFTERLIGHT/
       - name: Configure Pages
         uses: actions/configure-pages@v5

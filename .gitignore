@@ -4,3 +4,7 @@ artifacts/
 *.log
 .DS_Store
 .runtime/
+.env.local
+.env.*.local
+.dev.vars
+.wrangler/

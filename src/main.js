@@ -33,11 +33,13 @@ import {simulatedPerformance} from './vehicle-performance.js';
 import {disposeVehicle,showroomPose} from './showroom-scene.js';
 import {TireFX} from './tire-fx.js';
 import {RaceStats} from './race-stats.js';
+import {LeaderboardScreen} from './leaderboard-screen.js';
+import {leaderboardApiUrl, getLeaderboardProfile, submitLeaderboardScore} from './leaderboard-client.js';
 
 const $=mountUI();
 const archive=new RaceArchive({getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value)});
 const designStore=new DesignStore({getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value)});
-let historyScreen,raceSession=null;
+let historyScreen,leaderboardScreen,raceSession=null;
 let trackEditor,practiceReturnId=null;
 const settings=readSave('afterlight.settings',{quality:'medium',sound:true,voice:true,dynamicCamera:true,fps:false});
 let state='loading',selectedModel='aurora',paint='#b8d9cf',mode='race',difficulty='normal',theme='day';
@@ -136,6 +138,32 @@ function saveSession(status){
 }
 function openHistory(){historyScreen.open();state='history';show('menu',false);show('toast',false);keys.clear();}
 function closeHistory(){historyScreen.close();state='menu';show('menu');$('open-history').focus();}
+function openLeaderboard(){
+ state='leaderboard';show('menu',false);show('toast',false);keys.clear();
+ leaderboardScreen.open({track:$('circuit').value||track.id,mode:$('mode').value});
+}
+function closeLeaderboard(){leaderboardScreen.close();state='menu';show('menu');$('open-leaderboard').focus();}
+async function submitGlobalResult(){
+ if(!raceSession||!player||practiceReturnId||raceSession.leaderboardState==='sending'||raceSession.leaderboardState==='sent')return;
+ if(mode==='race'&&!drivers.every(d=>d.finishTime!==null))return;
+ if(!leaderboardApiUrl()){
+   raceSession.leaderboardState='offline';$('leaderboard-upload').textContent='成绩已保存在本机；在线排行榜 API 尚未配置。';$('leaderboard-retry').hidden=true;return;
+ }
+ const placement=ranking(drivers).indexOf(player)+1;
+ const bestLap=Math.min(...player.lapTimes);
+ if(!Number.isFinite(player.finishTime)||!Number.isFinite(bestLap))return;
+ const session=raceSession;session.leaderboardState='sending';
+ $('leaderboard-upload').textContent='正在提交匿名成绩到全球排行榜…';$('leaderboard-retry').hidden=true;
+ const profile=getLeaderboardProfile();
+ try{
+   await submitLeaderboardScore({runId:session.id,trackId:track.id,mode,theme,difficulty,vehicleId:selectedModel,elapsedMs:Math.round(player.finishTime*1000),placement:mode==='race'?placement:null,bestLapMs:Math.round(bestLap*1000),penaltyMs:Math.round(player.penalty*1000)},profile);
+   if(raceSession!==session)return;
+   session.leaderboardState='sent';$('leaderboard-upload').textContent='已提交全球排行榜 · '+(mode==='race'?`最终第 ${placement} 名`:'单圈成绩已登记');
+ }catch(error){
+   if(raceSession!==session)return;
+   session.leaderboardState='failed';$('leaderboard-upload').textContent=`本机成绩已保存，在线提交失败：${error.message||'网络错误'}`;$('leaderboard-retry').hidden=false;
+ }
+}
 
 function returnMenu(){
  const editorId=practiceReturnId;
@@ -358,6 +386,7 @@ function renderResults(){
  const results=ranking(drivers),rank=results.indexOf(player)+1,bestLap=Math.min(...player.lapTimes);
  const final=drivers.every(d=>d.finishTime!==null);
  if(raceSession)archive.updateRank(raceSession.id,rank,final);
+ if(final)submitGlobalResult();
  $('result-title').textContent=mode==='time'?'TIME. WELL SPENT.':!final?'ACROSS THE LINE.':rank===1?'THE COAST IS YOURS.':'CHASE COMPLETE.';
  $('result-sub').textContent=!final?'你已冲线。其他车手仍在比赛，最终名次将包含复位罚时。':rank===1&&mode==='race'?'冠军。这条赛道，记住了你的名字。':'冲线。每一个弯，都有再快一点的可能。';
  $('result-position').textContent=mode==='time'?'TIME ATTACK':`${final?'':'暂列 '}${String(rank).padStart(2,'0')} / 08`;
@@ -523,6 +552,8 @@ function bindUI(){
  $('showroom').onclick=$('nav-studio').onclick=openStudio;
  $('open-garage').onclick=$('studio-choose').onclick=()=>openGarage();
  $('open-history').onclick=openHistory;
+ $('open-leaderboard').onclick=openLeaderboard;
+ $('leaderboard-retry').onclick=()=>{if(raceSession)raceSession.leaderboardState='failed';submitGlobalResult();};
  $('studio-back').onclick=returnMenu;$('nav-settings').onclick=()=>show('settings-modal');
  $('start-race').onclick=setupRace;$('resume').onclick=togglePause;
  $('restart').onclick=$('result-retry').onclick=setupRace;
@@ -540,6 +571,7 @@ function bindUI(){
  window.addEventListener('keydown',e=>{
    if(state==='editor')return;
    if(state==='history'){if(e.code==='Escape'){e.preventDefault();closeHistory();}return;}
+   if(state==='leaderboard'){if(e.code==='Escape'){e.preventDefault();closeLeaderboard();}return;}
    if(state==='intro'&&['Space','Enter','Escape'].includes(e.code)){e.preventDefault();raceIntro.skip();return;}
    if(['SELECT','INPUT','TEXTAREA'].includes(document.activeElement?.tagName))return;
    if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();
@@ -571,7 +603,7 @@ function frame(now){
    while(accumulator>=1/60){simulate(1/60);accumulator-=1/60;}
    updateMeshes(dt);if(!finishSequence)raceCamera(dt);
    audio.update({speed:player.speed,throttle:player.throttle,brake:player.brake,slip:player.slip,model:selectedModel,dt});
- } else if(state==='menu'||state==='history')menuCamera(dt);
+ } else if(state==='menu'||state==='history'||state==='leaderboard')menuCamera(dt);
  else if(state==='finished')audio.update({speed:0,throttle:0,brake:0,slip:0,model:selectedModel,dt});
  else if(state==='studio'){
    if(studioTransition>0){camera.position.lerp(camPos,1-Math.exp(-6*dt));controls.target.lerp(camTarget,1-Math.exp(-6*dt));studioTransition-=dt;}
@@ -622,6 +654,7 @@ async function boot(){
    selectCar(selectedModel);setPaint(paint);
    garage=new Garage(renderer,studioEnvironment,{onCancel:()=>{returnMenu();if(garageReturn==='studio')openStudio();},onConfirm:saved=>{savedGarage=saved;writeSave(GARAGE_KEY,saved);paint=saved.colors[saved.selected];selectCar(saved.selected);setPaint(paint);returnMenu();show('race-modal');circuitBrief();}});
    historyScreen=new HistoryScreen(archive,closeHistory);
+   leaderboardScreen=new LeaderboardScreen({onBack:closeLeaderboard});
    trackEditor=new TrackEditor(designStore,{
      onBack:()=>{state='menu';show('menu');menuCamera(1,true);},
      onSave:(design,result,deletedId)=>{syncCustomCircuits(design?.id||deletedId||null);historyScreen?.render();},
