@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-const MODEL_ID = 'aurora';
+const MODEL_ID = 'green-bug';
 const MODEL_URL = `${import.meta.env?.BASE_URL || '/'}assets/vehicles/candidates/green-bug/green_bug_stylized_scifi_car_free.glb`;
 const WHEEL_NAME = /(wheel|tire|tyre)[ _.-]*(fl|fr|rl|rr|front.?left|front.?right|rear.?left|rear.?right)|(fl|fr|rl|rr)[ _.-]*(wheel|tire|tyre)/i;
 const WHEEL_KEYS = ['fl', 'fr', 'rl', 'rr'];
@@ -15,9 +15,9 @@ const defaultLoader = new GLTFLoader();
 const defaultCache = new Map();
 const customLoaderCaches = new WeakMap();
 
-/** Loads the optional Aurora visual. The generated car remains the safe fallback. */
-export function loadVehicleVisual(car, { vehicleId = 'aurora', color, isPlayer = false, loader = defaultLoader } = {}) {
-  if (vehicleId !== MODEL_ID || !isPlayer) return Promise.resolve({ loaded: false, reason: 'not-experiment-car' });
+/** Loads the Green Bug visual only for a selected player car or an explicit showroom preview. */
+export function loadVehicleVisual(car, { vehicleId = MODEL_ID, isPlayer = false, preview = false, loader = defaultLoader } = {}) {
+  if (vehicleId !== MODEL_ID || (!isPlayer && !preview)) return Promise.resolve({ loaded: false, reason: 'not-green-bug-preview' });
   const token = car.userData.visualLoadToken = (car.userData.visualLoadToken || 0) + 1;
   const cache = loader === defaultLoader ? defaultCache : getLoaderCache(loader);
   const cached = cache.has(MODEL_URL);
@@ -73,7 +73,7 @@ export function updateImportedWheels(car, steer, speed, dt) {
       const steeringAngle = (key === 'fl' ? 1 : -1) * steer * .44;
       wheel.pivot.rotation.y = steeringAngle === 0 ? 0 : steeringAngle;
     }
-    wheel.spin.rotation.x += speed * dt / (car.userData.wheelRadius || .37);
+    wheel.spin.rotation.x += speed * dt / (wheel.radius || car.userData.wheelRadius || .37);
   }
 }
 
@@ -117,7 +117,12 @@ export function inspectScene(root) {
     const names = GREEN_BUG_WHEELS[key];
     const pivot = root.getObjectByName(names[0]);
     const spin = root.getObjectByName(names[1]);
-    if (pivot?.isObject3D && spin?.isMesh && pivot.getObjectById(spin.id) === spin) wheels[key] = { pivot, spin };
+    if (pivot?.isObject3D && spin?.isMesh && pivot.getObjectById(spin.id) === spin) {
+      spin.geometry.computeBoundingBox();
+      const extent = spin.geometry.boundingBox.getSize(new THREE.Vector3());
+      // Green Bug's wheel axle is local X, so Y/Z are the tire's radial dimensions.
+      wheels[key] = { pivot, spin, radius: Math.max(extent.y, extent.z) * .5 * root.scale.x };
+    }
   }
   // Generic name matching stays available for other vehicles.
   if (Object.keys(wheels).length !== 4) {

@@ -29,7 +29,7 @@ import { VEHICLES,createDriver,resetDriver,stepDriver,aiControls,resolveCars,upd
 import {createCockpit} from './cockpit.js';
 import {Garage} from './garage.js';
 import {normalizeGarage,GARAGE_KEY} from './garage-state.js';
-import {VEHICLE_LIST} from './vehicle-catalog.js';
+import {VEHICLE_LIST,GREEN_BUG_ID} from './vehicle-catalog.js';
 import {simulatedPerformance} from './vehicle-performance.js';
 import {disposeVehicle,showroomPose} from './showroom-scene.js';
 import {TireFX} from './tire-fx.js';
@@ -112,9 +112,17 @@ function selectCar(model){
  $('studio-mass').textContent=`${spec.mass} KG`;$('studio-speed').textContent=`${Math.round(spec.topSpeed*3.6)} KM/H`;
  $('studio-layout').textContent=spec.layout.split(' · ')[0];
  $('studio-desc').textContent=spec.description;
+ document.querySelector('.studio-colors').hidden=spec.paintable===false;
+ $('export-model').hidden=model===GREEN_BUG_ID;
+ document.querySelector('.studio-detail').innerHTML=model===GREEN_BUG_ID?'<strong>FAB VEHICLE ASSET</strong><br>官方原始 GLB · 原厂材质与发光贴图<br>四轮独立控制 · 合成驾驶舱':'<strong>CRAFTED IN THREE DIMENSIONS</strong><br>原创参数化曲面 · 多层车漆<br>独立轮组 · 灯具与座舱结构<br><span id="mesh-stat"></span>';
  let triangles=0;heroCar.traverse(o=>{if(o.isMesh)triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;});
- $('mesh-stat').textContent=`${Math.round(triangles).toLocaleString()} TRIANGLES · 可导出 GLB`;
+ if(model!==GREEN_BUG_ID)$('mesh-stat').textContent=`${Math.round(triangles).toLocaleString()} TRIANGLES · 可导出 GLB`;
  if(state==='studio')setStudioView(studioView,true);
+ if(model===GREEN_BUG_ID)loadVehicleVisual(heroCar,{vehicleId:model,preview:true}).then(status=>{
+   if(!status.loaded||heroCar?.userData.importedVisual==null)return;
+   let importedTriangles=0;heroCar.userData.importedVisual.traverse(o=>{if(o.isMesh)importedTriangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;});
+   document.querySelector('.studio-detail').innerHTML=`<strong>FAB VEHICLE ASSET</strong><br>官方原始 GLB · 原厂材质与发光贴图<br>四轮独立控制 · 合成驾驶舱<br><span id="mesh-stat">${Math.round(importedTriangles).toLocaleString()} TRIANGLES · FAB GLB</span>`;
+ });
 }
 
 function setPaint(color){paint=color;if(heroCar)heroCar.userData.paint.color.set(color);document.querySelectorAll('[data-paint]').forEach(e=>e.classList.toggle('selected',e.dataset.paint===color));}
@@ -124,7 +132,7 @@ function openGarage(){
 }
 
 function openStudio(){
- state='studio';show('menu',false);show('studio');heroCar.visible=true;controls.enabled=true;
+ hideModals();state='studio';show('menu',false);show('studio');heroCar.visible=true;controls.enabled=true;
  controls.minDistance=2;controls.maxDistance=16;controls.maxPolarAngle=Math.PI*.49;
  controls.minPolarAngle=.18;controls.enablePan=false;setStudioView('orbit',true);
  scene.environment=studioEnvironment;scene.environmentIntensity=1;
@@ -326,7 +334,7 @@ function setupRace({fastRetry=false,retryContext=null}={}){
      const initialMode=theme==='night'?(d.isPlayer?1:(i%2===0?(i%3===0?2:1):0)):0;
      setCarLightMode(car,initialMode,d.isPlayer?playerLightProfile:aiProfile);d.lightMode=initialMode;d.lightProfile=d.isPlayer?playerLightProfile:aiProfile;
      if(d.isPlayer){
-       if(d.model==='aurora') loadVehicleVisual(car,{vehicleId:d.model,color:paint,isPlayer:true});
+       if(d.model===GREEN_BUG_ID) loadVehicleVisual(car,{vehicleId:d.model,isPlayer:true});
        car.traverse(o=>o.layers.set(1));
        // The car uses layer 1 for the cockpit camera, but its lights must also
        // reach the default world layer or they cannot illuminate the road.
@@ -732,7 +740,7 @@ async function boot(){
    const fill=new THREE.HemisphereLight('#aac8e2','#142025',.6);studioLighting.add(fill);scene.add(studioLighting);
    $('loading-status').textContent='抛光车身，准备第一缕阳光';await new Promise(requestAnimationFrame);
    selectCar(selectedModel);setPaint(paint);
-   garage=new Garage(renderer,studioEnvironment,{onCancel:()=>{returnMenu();if(garageReturn==='studio')openStudio();},onConfirm:saved=>{savedGarage=saved;writeSave(GARAGE_KEY,saved);paint=saved.colors[saved.selected];selectCar(saved.selected);setPaint(paint);returnMenu();show('race-modal');circuitBrief();}});
+   garage=new Garage(renderer,studioEnvironment,{onCancel:()=>{returnMenu();if(garageReturn==='studio')openStudio();},onConfirm:saved=>{const returnToStudio=garageReturn==='studio';savedGarage=saved;writeSave(GARAGE_KEY,saved);paint=saved.colors[saved.selected];selectCar(saved.selected);setPaint(paint);if(returnToStudio){returnMenu();openStudio();}else{returnMenu();show('race-modal');circuitBrief();}}});
    historyScreen=new HistoryScreen(archive,closeHistory);
    leaderboardScreen=new LeaderboardScreen({onBack:closeLeaderboard});
    trackEditor=new TrackEditor(designStore,{

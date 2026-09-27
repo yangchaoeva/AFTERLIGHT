@@ -1,16 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {GarageSelection,normalizeGarage} from '../src/garage-state.js';
-import {VEHICLE_LIST} from '../src/vehicle-catalog.js';
+import {VEHICLE_LIST,GARAGE_VEHICLE_LIST,GREEN_BUG_ID,VEHICLES} from '../src/vehicle-catalog.js';
 import {createCar,updateCar,setCarLightMode} from '../src/vehicle.js';
 import {disposeVehicle} from '../src/showroom-scene.js';
 import {simulatedPerformance} from '../src/vehicle-performance.js';
 test('garage transactions cancel drafts, confirm only current paint, and sanitize storage',()=>{
  const g=new GarageSelection();g.select('nightslash');g.color('#123456');g.cancel();assert.equal(g.preview,'aurora');assert.notEqual(g.colors.nightslash,'#123456');
  g.select('nightslash');g.color('#123456');g.confirm();g.select('tempest');g.color('#654321');g.confirm();assert.equal(g.saved.colors.nightslash,'#123456');assert.equal(g.saved.colors.tempest,'#654321');
- g.move(1);assert.equal(g.preview,'aurora');g.move(-1);assert.equal(g.preview,'tempest');g.select('empty');assert.equal(g.preview,'tempest');assert.equal(normalizeGarage({selected:'bad',colors:{aurora:'javascript:'}}).selected,'aurora');
+ g.move(1);assert.equal(g.preview,GREEN_BUG_ID);g.move(-1);assert.equal(g.preview,'tempest');g.select('empty');assert.equal(g.preview,'tempest');assert.equal(normalizeGarage({selected:'bad',colors:{aurora:'javascript:'}}).selected,'aurora');
 });
-for(const spec of VEHICLE_LIST)test(`${spec.id}: real finite mesh, stationary calipers, steering, brake and headlight modes`,()=>{
+test('Green Bug is selectable in both showrooms, keeps Aurora physics tuning, and stays out of the AI fleet',()=>{
+ const g=new GarageSelection();g.begin(GREEN_BUG_ID);assert.equal(g.preview,GREEN_BUG_ID);assert.equal(VEHICLES[GREEN_BUG_ID].wheelbase,VEHICLES.aurora.wheelbase);assert.equal(VEHICLES[GREEN_BUG_ID].length,VEHICLES.aurora.length);assert.equal(VEHICLES[GREEN_BUG_ID].halfWidth,VEHICLES.aurora.halfWidth);assert.equal(VEHICLES[GREEN_BUG_ID].acceleration,VEHICLES.aurora.acceleration);assert.equal(VEHICLES[GREEN_BUG_ID].paintable,false);assert.equal(VEHICLE_LIST.length,5);assert.equal(GARAGE_VEHICLE_LIST.length,6);assert.ok(!VEHICLE_LIST.some(s=>s.id===GREEN_BUG_ID));
+ g.confirm();assert.equal(normalizeGarage(g.saved).selected,GREEN_BUG_ID);
+});
+for(const spec of GARAGE_VEHICLE_LIST)test(`${spec.id}: real finite mesh, stationary calipers, steering, brake and headlight modes`,()=>{
  const car=createCar({model:spec.id});let vertices=0;
  car.traverse(o=>{if(o.geometry){const a=o.geometry.attributes.position.array;assert.ok(a.every(Number.isFinite));vertices+=a.length/3;}});assert.ok(vertices>1000);
  const w=car.userData.wheels[0],fixed=w.pivot.children.filter(c=>c!==w.spin);assert.ok(fixed.length>0);const rotations=fixed.map(c=>c.rotation.toArray());

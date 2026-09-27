@@ -25,7 +25,7 @@ function fixtureLoader(scene, failure) {
 test('optional glTF failure preserves the fallback car and its physics-facing root', async () => {
   const scene = new THREE.Scene(), car = createCar({ model: 'aurora' }); scene.add(car);
   const position = car.position.clone(), body = car.userData.body;
-  const result = await loadVehicleVisual(car, { vehicleId: 'aurora', isPlayer: true, loader: fixtureLoader(null, true) });
+  const result = await loadVehicleVisual(car, { vehicleId: 'green-bug', isPlayer: true, loader: fixtureLoader(null, true) });
   assert.equal(result.loaded, false);
   assert.equal(body.visible, true);
   assert.deepEqual(car.position.toArray(), position.toArray());
@@ -57,7 +57,7 @@ test('Green Bug uses explicit four wheel pivots, only front steer, and all four 
   const world = new THREE.Scene(), car = createCar({ model: 'aurora', color: '#123456' }); world.add(car);
   const rootPosition = car.position.clone(), rootQuaternion = car.quaternion.clone(), rootScale = car.scale.clone();
   const fallbackBody = car.userData.body;
-  const status = await loadVehicleVisual(car, { vehicleId: 'aurora', isPlayer: true, color: '#ff2200', loader });
+  const status = await loadVehicleVisual(car, { vehicleId: 'green-bug', isPlayer: true, loader });
   assert.equal(status.loaded, true);
   assert.equal(status.forward, '+Z'); assert.equal(status.up, '+Y');
   assert.equal(car.userData.importedVisual.parent, car);
@@ -92,7 +92,7 @@ test('Fast Retry style recreation shares one GLB load and never disposes its cac
   let sharedGeometry;
   for (let i = 0; i < 5; i++) {
     const world = new THREE.Scene(), car = createCar({ model: 'aurora' }); world.add(car);
-    const status = await loadVehicleVisual(car, { vehicleId: 'aurora', isPlayer: true, loader });
+    const status = await loadVehicleVisual(car, { vehicleId: 'green-bug', isPlayer: true, loader });
     assert.equal(status.loaded, true);
     assert.equal(status.cacheHit, i > 0);
     const wheel = car.userData.importedWheels.fl;
