@@ -1,0 +1,11 @@
+Model Information:
+* title:	My Futuristic Concept Car
+* source:	https://sketchfab.com/3d-models/my-futuristic-concept-car-2b0c4c23cd6046ac82f04b1b5be28a67
+* author:	AaronNg (https://sketchfab.com/AaronNg)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "My Futuristic Concept Car" (https://sketchfab.com/3d-models/my-futuristic-concept-car-2b0c4c23cd6046ac82f04b1b5be28a67) by AaronNg (https://sketchfab.com/AaronNg) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
