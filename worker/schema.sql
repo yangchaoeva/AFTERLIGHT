@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS afterlight_leaderboard_runs (
   best_lap_ms INTEGER CHECK (best_lap_ms BETWEEN 3000 AND elapsed_ms),
   penalty_ms INTEGER NOT NULL DEFAULT 0 CHECK (penalty_ms BETWEEN 0 AND 300000),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CHECK ((mode = 'race' AND placement IS NOT NULL AND best_lap_ms IS NOT NULL)
+  CHECK ((mode = 'race' AND (placement IS NULL OR placement BETWEEN 1 AND 8) AND best_lap_ms IS NOT NULL)
       OR (mode = 'time' AND placement IS NULL AND best_lap_ms IS NOT NULL))
 );
 

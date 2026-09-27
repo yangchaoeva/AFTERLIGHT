@@ -145,11 +145,11 @@ function openLeaderboard(){
 function closeLeaderboard(){leaderboardScreen.close();state='menu';show('menu');$('open-leaderboard').focus();}
 async function submitGlobalResult(){
  if(!raceSession||!player||practiceReturnId||raceSession.leaderboardState==='sending'||raceSession.leaderboardState==='sent')return;
- if(mode==='race'&&!drivers.every(d=>d.finishTime!==null))return;
  if(!leaderboardApiUrl()){
    raceSession.leaderboardState='offline';$('leaderboard-upload').textContent='成绩已保存在本机；在线排行榜 API 尚未配置。';$('leaderboard-retry').hidden=true;return;
  }
- const placement=ranking(drivers).indexOf(player)+1;
+ const raceFinal=drivers.every(d=>d.finishTime!==null);
+ const placement=mode==='race'&&raceFinal?ranking(drivers).indexOf(player)+1:null;
  const bestLap=Math.min(...player.lapTimes);
  if(!Number.isFinite(player.finishTime)||!Number.isFinite(bestLap))return;
  const session=raceSession;session.leaderboardState='sending';
@@ -158,7 +158,7 @@ async function submitGlobalResult(){
  try{
    await submitLeaderboardScore({runId:session.id,trackId:track.id,mode,theme,difficulty,vehicleId:selectedModel,elapsedMs:Math.round(player.finishTime*1000),placement:mode==='race'?placement:null,bestLapMs:Math.round(bestLap*1000),penaltyMs:Math.round(player.penalty*1000)},profile);
    if(raceSession!==session)return;
-   session.leaderboardState='sent';$('leaderboard-upload').textContent='已提交全球排行榜 · '+(mode==='race'?`最终第 ${placement} 名`:'单圈成绩已登记');
+   session.leaderboardState='sent';$('leaderboard-upload').textContent='已提交全球排行榜 · '+(mode==='race'?(placement===null?'竞速成绩已登记 · 名次待定':`最终第 ${placement} 名`):'单圈成绩已登记');
  }catch(error){
    if(raceSession!==session)return;
    session.leaderboardState='failed';$('leaderboard-upload').textContent=`本机成绩已保存，在线提交失败：${error.message||'网络错误'}`;$('leaderboard-retry').hidden=false;
@@ -376,6 +376,7 @@ function finishRace(){
  camera.layers.set(0);camera.layers.enable(1);camera.near=.12;$('hud').classList.remove('cockpit-mode');$('hud').classList.add('finish-mode');show('finish-cinema');
  $('finish-status').textContent=`P${String(ranking(drivers).indexOf(player)+1).padStart(2,'0')} / FINISH LINE CROSSED`;
  const entry=saveSession('finished');finishSequence.record=entry;
+ if(entry)void submitGlobalResult();
  const badge=$('record-badge');badge.hidden=!entry?.newRecord;
  if(entry?.newRecord){badge.innerHTML=`${entry.newRecord==='improved'?'↗ 新纪录':'首条纪录'} <small>${entry.newRecord==='improved'?`提升 ${timeString(entry.improvement)}`:'本组首次完赛'} · 同车型 / 同比赛条件</small>`;$('finish-status').textContent+=entry.newRecord==='improved'?' / NEW RECORD':' / FIRST RECORD';}
  $('record-note').textContent=practiceReturnId?'自由试驾不计入本地成绩；返回后可以继续修改这条赛道。':`${entry?.previousBest?'此前最佳 '+timeString(entry.previousBest):'首次建立本组成绩'} · ${VEHICLES[selectedModel].name} · ${player.penalty?`罚时 ${player.penalty} 秒已计入总成绩`:'无复位罚时'}${archive.error?' · 本地保存失败':''}。`;
@@ -386,7 +387,6 @@ function renderResults(){
  const results=ranking(drivers),rank=results.indexOf(player)+1,bestLap=Math.min(...player.lapTimes);
  const final=drivers.every(d=>d.finishTime!==null);
  if(raceSession)archive.updateRank(raceSession.id,rank,final);
- if(final)submitGlobalResult();
  $('result-title').textContent=mode==='time'?'TIME. WELL SPENT.':!final?'ACROSS THE LINE.':rank===1?'THE COAST IS YOURS.':'CHASE COMPLETE.';
  $('result-sub').textContent=!final?'你已冲线。其他车手仍在比赛，最终名次将包含复位罚时。':rank===1&&mode==='race'?'冠军。这条赛道，记住了你的名字。':'冲线。每一个弯，都有再快一点的可能。';
  $('result-position').textContent=mode==='time'?'TIME ATTACK':`${final?'':'暂列 '}${String(rank).padStart(2,'0')} / 08`;

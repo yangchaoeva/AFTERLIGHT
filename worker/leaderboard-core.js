@@ -33,7 +33,7 @@ export function normalizeScore(input) {
   if (!VEHICLE_IDS.includes(vehicleId)) throw new Error('车辆无效');
   if (!intIn(elapsedMs, 10000, 1800000)) throw new Error('完赛用时超出有效范围');
   if (!intIn(penaltyMs, 0, 300000)) throw new Error('罚时无效');
-  if (mode === 'race' && !intIn(placement, 1, 8)) throw new Error('竞速最终名次无效');
+  if (mode === 'race' && placement !== null && !intIn(placement, 1, 8)) throw new Error('竞速最终名次无效');
   if (mode === 'time' && placement !== null) throw new Error('单圈计时不记录竞速名次');
   if (bestLapMs !== null && !intIn(bestLapMs, 3000, elapsedMs)) throw new Error('最快圈时间无效');
   if (mode === 'time' && bestLapMs === null) throw new Error('计时挑战成绩缺少有效圈速');

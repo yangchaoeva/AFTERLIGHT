@@ -25,6 +25,9 @@ test('score normalization accepts the actual time-attack and race result shapes'
   assert.equal(time.placement, null);
   assert.equal(race.placement, 2);
   assert.equal(race.trackId, 'harbor');
+  const pendingRace = normalizeScore({ runId, playerId, nickname: 'EARLY FINISH', region: 'CN', trackId: 'mountain', mode: 'race', theme: 'night', difficulty: 'hard', vehicleId: 'aurora', elapsedMs: 266383, placement: null, bestLapMs: 129400, penaltyMs: 0 });
+  assert.equal(pendingRace.placement, null);
+  assert.equal(pendingRace.elapsedMs, 266383);
 });
 
 test('score validation rejects fake tracks, invalid regions, impossible placement and out-of-range time', () => {
