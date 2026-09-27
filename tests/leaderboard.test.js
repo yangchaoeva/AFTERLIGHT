@@ -12,9 +12,9 @@ test('V0.1 filters use track, mode and region only; courses stay separate', () =
   assert.equal(harbor.trackId, 'harbor');
   assert.equal(coast.trackId, 'coast');
   assert.equal(harbor.region, 'CN');
-  assert.deepEqual(harbor, { trackId: 'harbor', mode: 'time', region: 'CN', playerId });
+  assert.deepEqual(harbor, { trackId: 'harbor', mode: 'time', region: 'CN', playerId, rulesetVersion: 'classic-v1' });
   const race = parseBoardFilters(`https://api.test/api/leaderboard?track=mountain&mode=race&theme=night&difficulty=hard&region=NA&playerId=${playerId}`);
-  assert.deepEqual(race, { trackId: 'mountain', mode: 'race', region: 'NA', playerId });
+  assert.deepEqual(race, { trackId: 'mountain', mode: 'race', region: 'NA', playerId, rulesetVersion: 'classic-v1' });
   assert.throws(() => parseBoardFilters('https://api.test/api/leaderboard?track=custom-something'), /赛道无效/);
 });
 

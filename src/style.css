@@ -36,3 +36,8 @@ button:not(:disabled):active{transform:translateY(1px) scale(.98)}button:focus-v
 @media(prefers-reduced-motion:reduce){button{transition:none}button:not(:disabled):hover{transform:none}}
 
 @media(prefers-reduced-motion:reduce){button:not(:disabled):hover,#play:hover,#open-garage:hover,.garage-confirm:hover,.garage-card:hover,.swatch:hover,.garage-swatch:hover{transform:none}}
+
+.pb-delta{display:block;margin-top:9px;font:600 12px 'Barlow Condensed','Bahnschrift',sans-serif;letter-spacing:.14em;color:#a9ecf6;text-shadow:0 0 12px #62d9ef55}
+.drift-energy{position:absolute;top:24%;left:50%;transform:translateX(-50%);width:230px;padding:9px 13px;background:#071522c9;border:1px solid #8bd6e044;border-radius:4px;color:#dff7ff;display:grid;grid-template-columns:1fr auto;gap:6px 10px;backdrop-filter:blur(8px)}
+.drift-energy[hidden]{display:none}.drift-energy small{font:600 10px Manrope,sans-serif;letter-spacing:.18em;color:#a9dce8}.drift-energy b{font:700 11px Manrope,sans-serif;letter-spacing:.08em}.drift-energy-track{grid-column:1/-1;height:5px;background:#9ddde322;border-radius:4px;overflow:hidden}.drift-energy-track i{display:block;width:0;height:100%;background:#79d8e8;transition:width .12s linear}.drift-energy.ready .drift-energy-track i{background:#e8bd6b}.drift-energy.ready b{color:#f2d187}.drift-energy.active .drift-energy-track i{background:#fff2b4;box-shadow:0 0 10px #fff2b4}
+.drift-debug-overlay{position:fixed;z-index:100;top:12px;left:12px;min-width:270px;padding:12px 15px;background:rgba(4,12,18,.9);border:1px solid rgba(121,216,232,.52);color:#d9f4f7;font:11px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre;pointer-events:none;box-shadow:0 8px 28px #0008}

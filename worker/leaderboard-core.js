@@ -10,6 +10,8 @@ const intIn = (value, min, max) => Number.isSafeInteger(value) && value >= min &
 
 export function parseBoardFilters(url) {
   const q = new URL(url).searchParams;
+  const rulesetVersion = q.get('rulesetVersion') || 'classic-v1';
+  if (rulesetVersion !== 'classic-v1') throw new Error('该规则版本暂不支持排行榜');
   const trackId = q.get('track') || 'harbor';
   // `time_trial` is the public V0.1 filter value; keep the existing DB value `time`.
   const requestedMode = q.get('mode') || 'time_trial';
@@ -20,12 +22,13 @@ export function parseBoardFilters(url) {
   if (!MODES.includes(mode)) throw new Error('模式无效');
   if (region !== 'global' && !REGIONS.includes(region)) throw new Error('地区无效');
   if (playerId && !UUID.test(playerId)) throw new Error('车手 ID 无效');
-  return { trackId, mode, region, playerId };
+  return { trackId, mode, region, playerId, rulesetVersion };
 }
 
 export function normalizeScore(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('成绩数据无效');
   const { runId, playerId, nickname, region, trackId, mode, theme, difficulty, vehicleId, elapsedMs, placement, bestLapMs, penaltyMs } = input;
+  if ((input.rulesetVersion || 'classic-v1') !== 'classic-v1') throw new Error('该规则版本暂不支持排行榜');
   if (!UUID.test(runId || '') || !UUID.test(playerId || '')) throw new Error('匿名车手或比赛 ID 无效');
   if (!TRACK_IDS.includes(trackId)) throw new Error('玩家赛道暂不支持全球排行');
   if (!MODES.includes(mode) || !THEMES.includes(theme) || !REGIONS.includes(region)) throw new Error('比赛条件无效');

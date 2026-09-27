@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { wrap01 } from './track.js';
 
 import {VEHICLES,getVehicle} from './vehicle-catalog.js';
+import {effectiveVehiclePerformance} from './drift-boost.js';
 export {VEHICLES} from './vehicle-catalog.js';
 export const angleDelta = (a,b) => Math.atan2(Math.sin(a-b),Math.cos(a-b));
 const damp=(a,b,k,dt)=>THREE.MathUtils.lerp(a,b,1-Math.exp(-k*dt));
@@ -32,9 +33,9 @@ export function resetDriver(driver,track,t=driver.t,lane=0) {
   driver.handbrake=0;driver.handbrakePulse=0;driver.handbrakeHeld=false;
 }
 
-export function stepDriver(d,input,track,dt) {
+export function stepDriver(d,input,track,dt,{boostActive=false}={}) {
   d.driveTime=(d.driveTime||0)+dt;d.laneChangeCooldown=Math.max(0,(d.laneChangeCooldown||0)-dt);
-  const spec=VEHICLES[d.model]||VEHICLES.aurora;
+  const spec=effectiveVehiclePerformance(VEHICLES[d.model]||VEHICLES.aurora,boostActive);
   d.throttle=THREE.MathUtils.clamp(input.throttle||0,0,1);
   d.brake=THREE.MathUtils.clamp(input.brake||0,0,1);
   d.steer=damp(d.steer,THREE.MathUtils.clamp(input.steer||0,-1,1),input.digital?10:13,dt);
