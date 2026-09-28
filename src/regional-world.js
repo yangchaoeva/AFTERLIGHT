@@ -230,7 +230,7 @@ function mountain(scene,track,terrain,p){
     const s=track.sample(start+(end-start)*i/n);
     for(let k=0;k<=24;k++){
       const a=k/24*Math.PI,v=s.position.clone().addScaledVector(s.right,Math.cos(a)*r).addScaledVector(s.up,2+Math.sin(a)*r*.65);
-      pos.push(...v.toArray());uv.push(k/24,i/n);
+      pos.push(...v.toArray());uv.push(k/24*Math.PI*r*2/8,i/n*((end-start)*track.length)/8);
       if(i<n&&k<24){const j=i*25+k;idx.push(j,j+1,j+25,j+1,j+26,j+25);}
     }
     if(i%2===0){const g=localFrame(s);scene.add(g);
@@ -240,7 +240,7 @@ function mountain(scene,track,terrain,p){
     }}
   }
   const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geo.setIndex(idx);geo.computeVertexNormals();
-  const roofMat=p.concrete.clone();roofMat.side=THREE.DoubleSide;const roof=new THREE.Mesh(geo,roofMat);roof.castShadow=true;roof.receiveShadow=true;scene.add(roof);
+  const roofMat=p.concrete.clone();roofMat.side=THREE.DoubleSide;roofMat.bumpScale=.012;const roof=new THREE.Mesh(geo,roofMat);roof.castShadow=true;roof.receiveShadow=true;scene.add(roof);
   for(const t of [start,end]){
     const g=localFrame(track.sample(t));scene.add(g);
     for(const side of [-1,1])box(g,p.sand,[side*(r+1),4,0],[2,9,3]);

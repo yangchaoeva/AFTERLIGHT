@@ -85,7 +85,7 @@ export class Garage{
     const canvas=document.createElement('canvas');canvas.width=320;canvas.height=176;const ctx=canvas.getContext('2d'),data=ctx.createImageData(320,176);
     for(let y=0;y<176;y++)data.data.set(pixels.subarray((175-y)*320*4,(176-y)*320*4),y*320*4);ctx.putImageData(data,0,0);
     const url=canvas.toDataURL('image/png');this.thumbnails.set(spec.id,url);this.ui.querySelector(`[data-garage-model="${spec.id}"] img`).src=url;disposeVehicle(car);
-  }}finally{target.dispose();scene.traverse(o=>{if(o.userData.sharedVehicleAsset)return;o.geometry?.dispose();if(o.material)o.material.dispose();if(o.isLight)o.dispose?.();});this.generating=false;}
+  }}finally{target.dispose();scene.traverse(o=>{if(o.userData.sharedVehicleAsset)return;o.geometry?.dispose();if(o.material){o.material.map?.dispose();o.material.dispose();}if(o.isLight)o.dispose?.();});this.generating=false;}
  }
  get telemetry(){return {preview:this.car?.userData.model,pending:this.pending,paint:this.selection.paint,view:this.view,thumbnails:this.thumbnails.size,camera:this.camera.position.toArray(),geometries:this.renderer.info.memory.geometries,textures:this.renderer.info.memory.textures};}
 }

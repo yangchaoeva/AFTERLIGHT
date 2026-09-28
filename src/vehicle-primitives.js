@@ -72,8 +72,8 @@ export function materials(color, model) {
   function physical(name, options) { const m = new THREE.MeshPhysicalMaterial(options); m.name = name; return m; }
   function standard(name, options) { const m = new THREE.MeshStandardMaterial(options); m.name = name; return m; }
   return {
-    paint: physical('pearlescent body paint', { color, metalness: 0.76, roughness: 0.19, clearcoat: 1, clearcoatRoughness: 0.075, envMapIntensity: 1.7, side: THREE.DoubleSide }),
-    glass: physical('smoked laminated glass', { color: '#172e3c', metalness: 0.38, roughness: 0.075, transparent: true, opacity: 0.91, clearcoat: 1, clearcoatRoughness: 0.03, envMapIntensity: 1.3, side: THREE.DoubleSide, depthWrite: false }),
+    paint: physical('pearlescent body paint', { color, metalness: model === 'aurora' ? 0.58 : 0.76, roughness: model === 'aurora' ? 0.26 : 0.19, clearcoat: 1, clearcoatRoughness: 0.075, envMapIntensity: model === 'aurora' ? 1.35 : 1.7, side: THREE.DoubleSide }),
+    glass: physical('smoked laminated glass', { color: '#172e3c', metalness: model === 'aurora' ? 0.18 : 0.38, roughness: 0.075, transparent: true, opacity: model === 'aurora' ? 0.80 : 0.91, clearcoat: 1, clearcoatRoughness: 0.03, envMapIntensity: 1.3, side: THREE.DoubleSide, depthWrite: false }),
     black: standard('satin black trim', { color: '#10151a', roughness: 0.49, metalness: 0.28 }),
     carbon: physical('graphite composite', { color: '#182128', metalness: 0.43, roughness: 0.34, clearcoat: 0.65 }),
     rubber: standard('tire rubber', { color: '#15191c', roughness: 0.92, metalness: 0.02 }),

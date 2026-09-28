@@ -7,7 +7,7 @@ import { createCar } from '../src/vehicle.js';
 import { inspectScene, loadVehicleVisual, updateImportedWheels } from '../src/vehicle-visual.js';
 import { disposeVehicle } from '../src/showroom-scene.js';
 
-test('official Aurora glTF and every relative buffer/image dependency are present', async () => {
+test('archived concept glTF and every relative buffer/image dependency are present', async () => {
   const root = join(process.cwd(), 'public/assets/vehicles/afterlight-concept/my_futuristic_concept_car');
   const gltf = JSON.parse(await readFile(join(root, 'scene.gltf'), 'utf8'));
   const refs = [gltf.buffers.map(item => item.uri), gltf.images.map(item => item.uri)].flat();

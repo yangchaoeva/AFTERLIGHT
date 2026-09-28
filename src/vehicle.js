@@ -10,6 +10,7 @@ export function createCar({ model = 'aurora', color, detail = 'high' } = {}) {
   model = spec.id;
   const high = detail !== 'low';
   const exotic = model === 'vesper', club = model === 'kasumi';
+  const aurora = model === 'aurora';
   const m = materials(color ?? spec.color, model);
   if(spec.premium){const built=buildPremiumCar(spec,m,high);return equipCar(built.car,built.body,m,spec,detail,{...spec.design,halfWidth:spec.halfWidth,wing:built.wing});}
   const car = new THREE.Group(); car.name = spec.label;
@@ -66,9 +67,34 @@ export function createCar({ model = 'aurora', color, detail = 'high' } = {}) {
     }
     p.tube([[side * .88 * halfWidth, .25, rearAxle + .52], [side * .95 * halfWidth, .245, -.2], [side * .90 * halfWidth, .25, frontAxle - .52]], .035, m.carbon, 24);
     p.tube([[side * .9 * halfWidth, .284, rearAxle + .54], [side * .96 * halfWidth, .28, -.2], [side * .91 * halfWidth, .28, frontAxle - .56]], .009, m.paint, 24);
+    if (aurora && high) {
+      // A narrow machined sill catches a highlight without adding another material batch.
+      p.tube([[side * .91, .295, rearAxle + .49], [side * .96, .292, -.18], [side * .92, .295, frontAxle - .50]], .006, m.chrome, 32);
+    }
   }
   // Sculpted end caps follow the shell, with intake and optical units layered over them.
   for (const [z, front] of [[nose, true], [tail, false]]) {
+    if (front && aurora && high) {
+      // Leave an actual aperture in the fascia; the grille sits behind its painted edge.
+      const faceZ = (x, y) => {
+        const edge = top(x / width(z), z);
+        const t = THREE.MathUtils.clamp((y - .27) / (edge - .27), 0, 1);
+        return z + .048 * (1 - Math.pow(x / width(z), 2)) * Math.sin(Math.PI * t);
+      };
+      const patch = (x0, x1, y0, y1, nu = 18, nv = 5) => p.add(surface((u, v) => {
+        const x = THREE.MathUtils.lerp(x0, x1, u);
+        const lower = typeof y0 === 'function' ? y0(x) : y0;
+        const upper = typeof y1 === 'function' ? y1(x) : y1;
+        const y = THREE.MathUtils.lerp(lower, upper, v);
+        return [x, y, faceZ(x, y)];
+      }, nu, nv), m.paint);
+      const w = width(z);
+      patch(-w, w, .53, x => top(x / w, z), 32, 8);
+      patch(-w, w, .27, .325, 32, 3);
+      patch(-w, -.56, .325, .53, 7, 5);
+      patch(.56, w, .325, .53, 7, 5);
+      continue;
+    }
     p.add(surface((u, v) => {
       const x = (u * 2 - 1) * width(z), lo = front ? .27 : .32;
       return [x, lo + (top(u * 2 - 1, z) - lo) * v, z + (front ? 1 : -1) * .035 * Math.sin(Math.PI * u) * Math.sin(Math.PI * v)];
@@ -157,21 +183,29 @@ export function createCar({ model = 'aurora', color, detail = 'high' } = {}) {
   }
 
   // Front lower intake and side channels are inset black volumes with real grille vanes.
-  p.box([1.10, .195, .10], m.black, [0, .408, nose + .026], [0, 0, 0], .057);
+  p.box([1.10, .195, aurora && high ? .035 : .10], m.black, [0, .408, nose + (aurora && high ? -.039 : .026)], [0, 0, 0], aurora && high ? .015 : .057);
   p.box([1.24, .030, .18], m.carbon, [0, .284, nose + .046], [0, 0, 0], .012);
   for (const side of [-1, 1]) {
     p.box([.25, .18, .12], m.black, [side * .68, .395, nose - .039], [0, side * .14, 0], .034);
-    p.box([.028, .16, .19], m.paint, [side * .506, .407, nose + .027], [0, side * -.18, 0], .01);
+    if (!aurora) p.box([.028, .16, .19], m.paint, [side * .506, .407, nose + .027], [0, side * -.18, 0], .01);
     for (let i = 0; i < (high ? 3 : 2); i++) p.box([.194, .012, .055], m.carbon, [side * .68, .345 + i * .045, nose + .023], [0, side * .14, 0], .003);
     const lampZ = nose - .145;
-    p.box([.46, .105, .145], m.black, [side * .58, .668, lampZ], [-.16, side * -.19, side * -.045], .038);
-    p.box([.425, .073, .143], m.lens, [side * .58, .673, lampZ + .009], [-.16, side * -.19, side * -.045], .029);
+    const lampDrop = aurora && high ? .018 : 0;
+    p.box([.46, .105, .145], m.black, [side * .58, .668 - lampDrop, lampZ], [-.16, side * -.19, side * -.045], .038);
+    p.box([.425, .073, .143], m.lens, [side * .58, .673 - lampDrop, lampZ + .009], [-.16, side * -.19, side * -.045], .029);
     // Thin double optical blades give the car a distinct light signature.
-    for (const y of [.655, .688]) p.tube([[side * .386, y, lampZ + .077], [side * .59, y + .011, lampZ + .087], [side * .776, y + .010, lampZ + .058]], exotic ? .008 : .010, m.white, 22);
-    if (high) for (let i = 0; i < 3; i++) p.add(new THREE.SphereGeometry(.02, 10, 6), m.white, [side * (.47 + i * .095), .672, lampZ + .080], [0, 0, 0], [1, .7, .3]);
+    for (const y of [.655, .688]) p.tube([[side * .386, y - lampDrop, lampZ + .077], [side * .59, y + .011 - lampDrop, lampZ + .087], [side * .776, y + .010 - lampDrop, lampZ + .058]], exotic ? .008 : .010, m.white, 22);
+    if (high) for (let i = 0; i < 3; i++) p.add(new THREE.SphereGeometry(.02, 10, 6), m.white, [side * (.47 + i * .095), .672 - lampDrop, lampZ + .080], [0, 0, 0], [1, .7, .3]);
     p.box([.015, .045, .075], m.amber, [side * (width(nose - .45) + .008), .62, nose - .45], [0, 0, 0], .008);
   }
-  if (high) for (let i = -7; i <= 7; i++) p.box([.013, .143, .018], m.carbon, [i * .064, .408, nose + .084], [0, 0, .15], .003);
+  if (high && aurora) {
+    // Recessed dark blades read as intake depth instead of a bright external guard.
+    for (let i = 0; i < 4; i++) {
+      const y = .345 + i * .041;
+      p.box([1.02 - i * .025, .008, .016], m.carbon, [0, y, nose - .012], [0, 0, 0], .002);
+    }
+    p.tube([[-.55, .527, nose + .018], [0, .532, nose + .023], [.55, .527, nose + .018]], .003, m.chrome, 26);
+  } else if (high) for (let i = -7; i <= 7; i++) p.box([.013, .143, .018], m.carbon, [i * .064, .408, nose + .084], [0, 0, .15], .003);
 
   // Rear horizontal light sculpture, diffuser and twin metal exhaust outlets.
   p.box([1.54, .13, .095], m.black, [0, .705, tail - .025], [0, 0, 0], .04);
@@ -239,7 +273,8 @@ function equipCar(car,body,m,spec,detail,{nose,halfWidth,frontAxle,rearAxle,wing
   const nearBulbs = [], beamLights = [], beamTargets = [], ambientNodes = [], ambientPointLights = [];
   for (const side of [-1, 1]) {
     const bulb = new THREE.Mesh(new THREE.SphereGeometry(.075, 12, 8), nearMaterial);
-    bulb.position.set(side * (spec.premium?.72:.58), spec.premium?.82:.684, nose - .10); lightGroup.add(bulb); nearBulbs.push(bulb);
+    const bulbY = spec.premium ? .82 : model === 'aurora' && high ? .666 : .684;
+    bulb.position.set(side * (spec.premium?.72:.58), bulbY, nose - .10); lightGroup.add(bulb); nearBulbs.push(bulb);
     const target = new THREE.Object3D(); target.position.set(side * .50, .54, nose + 42); lightGroup.add(target); beamTargets.push(target);
     const beam = new THREE.SpotLight('#dcf6ff', 0, 96, .36, .68, 1.7);
     beam.position.set(side * (spec.premium?.72:.58), spec.premium?.82:.69, nose + .05); beam.target = target; beam.castShadow = false; lightGroup.add(beam); beamLights.push(beam);

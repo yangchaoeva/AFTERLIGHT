@@ -1,0 +1,11 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Concept asset review</title><style>html,body{margin:0;width:100%;height:100%;background:#262a2e}canvas{display:block}</style><script type="module">
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+const scene=new THREE.Scene();scene.background=new THREE.Color('#262a2e');
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;document.body.append(renderer.domElement);
+const camera=new THREE.PerspectiveCamera(36,innerWidth/innerHeight,.1,100);camera.position.set(6,3,7);camera.lookAt(0,.8,0);
+scene.add(new THREE.HemisphereLight('#dceaf4','#303239',2));for(const [color,intensity,x,y,z] of [['#fff0d8',4,-4,7,6],['#d8e8ff',2,5,4,-4]]){const light=new THREE.DirectionalLight(color,intensity);light.position.set(x,y,z);scene.add(light);}
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(100,100),new THREE.MeshStandardMaterial({color:'#34383d',roughness:.8}));floor.rotation.x=-Math.PI/2;floor.position.y=-.01;scene.add(floor);
+try{const gltf=await new GLTFLoader().loadAsync('/assets/vehicles/afterlight-concept/my_futuristic_concept_car/scene.gltf');const car=gltf.scene;scene.add(car);car.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(car),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3()),scale=4.61/size.z;car.scale.setScalar(scale);car.position.set(-center.x*scale,-box.min.y*scale,-center.z*scale);window.__concept={loaded:true,size:size.toArray(),scale};}catch(error){window.__concept={loaded:false,error:String(error)};}
+renderer.setAnimationLoop(()=>renderer.render(scene,camera));
+</script></html>

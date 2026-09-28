@@ -39,6 +39,7 @@ import {leaderboardApiUrl, getLeaderboardProfile, submitLeaderboardScore} from '
 import {PBTimeTrialGhost} from './pb-ghost.js';
 import {canFastRetry,captureRetryContext,retryCountdownNumber} from './fast-retry.js';
 import {DriftBoost, CLASSIC_RULESET_VERSION, driftDebugState, isDriftBoostEnabled} from './drift-boost.js';
+import {pixelRatioForQuality} from './render-quality.js';
 
 const $=mountUI();
 $('hud').insertAdjacentHTML('afterbegin','<div class="drift-energy" id="drift-energy-panel" hidden><small>DRIFT ENERGY</small><div class="drift-energy-track"><i id="drift-energy-fill"></i></div><b id="drift-energy-value">0%</b></div>');
@@ -83,10 +84,10 @@ const disposeCar=disposeVehicle;
 
 function setQuality(){
  const quality=settings.quality;
- renderer.setPixelRatio(Math.min(devicePixelRatio,quality==='high'?1.75:quality==='medium'?1.25:1));
+ renderer.setPixelRatio(pixelRatioForQuality(quality,devicePixelRatio));
  renderer.shadowMap.enabled=quality!=='low';
  renderer.setSize(innerWidth,innerHeight);
- if(world?.sunLight){world.sunLight.shadow.mapSize.set(quality==='high'?2048:1024,quality==='high'?2048:1024);world.sunLight.shadow.map?.dispose();world.sunLight.shadow.map=null;}
+ if(world?.sunLight){world.sunLight.shadow.mapSize.set(quality==='high'||quality==='native'?2048:1024,quality==='high'||quality==='native'?2048:1024);world.sunLight.shadow.map?.dispose();world.sunLight.shadow.map=null;}
 }
 function syncSettings(){
  $('quality').value=settings.quality;$('sound-enabled').checked=settings.sound;
@@ -705,7 +706,7 @@ function frame(now){
  if(elapsed>toastUntil)show('toast',false);if(elapsed>eventUntil)show('event-banner',false);
  renderer.render(scene,camera);
  fpsElapsed+=dt;fpsFrames++;
- if(fpsElapsed>.7){$('fps').textContent=`${Math.round(fpsFrames/fpsElapsed)} FPS · ${renderer.info.render.calls} CALLS · ${(renderer.info.render.triangles/1000000).toFixed(2)}M TRI`;fpsElapsed=0;fpsFrames=0;}
+ if(fpsElapsed>.7){const buffer=renderer.getDrawingBufferSize(new THREE.Vector2());$('fps').textContent=`${Math.round(fpsFrames/fpsElapsed)} FPS · ${buffer.x}×${buffer.y} PX · ${renderer.info.render.calls} CALLS · ${(renderer.info.render.triangles/1000000).toFixed(2)}M TRI`;fpsElapsed=0;fpsFrames=0;}
 }
 
 async function boot(){

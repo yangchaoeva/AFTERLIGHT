@@ -37,6 +37,36 @@ function grainTexture(seed, base, scatter=28) {
   return texture;
 }
 
+// A tile covers a few metres of road. Broad tonal patches break up the flat
+// asphalt, while fine aggregate and longitudinal wear remain visible up close.
+function asphaltTexture(){
+  const rng=seeded(20260928);
+  const texture=canvasTexture(1024,1024,(ctx,w,h)=>{
+    ctx.fillStyle='#5b5e5d';ctx.fillRect(0,0,w,h);
+    for(let i=0;i<110;i++){
+      const x=rng()*w,y=rng()*h,r=45+rng()*145;
+      const gradient=ctx.createRadialGradient(x,y,0,x,y,r);
+      const light=rng()>.52;
+      gradient.addColorStop(0,light?'rgba(196,189,170,.052)':'rgba(12,20,23,.075)');
+      gradient.addColorStop(1,'rgba(80,82,79,0)');
+      ctx.fillStyle=gradient;ctx.fillRect(x-r,y-r,r*2,r*2);
+    }
+    for(let i=0;i<90000;i++){
+      const shade=Math.floor(55+rng()*125);
+      ctx.fillStyle=`rgba(${shade},${shade},${shade},${.045+rng()*.11})`;
+      ctx.fillRect(rng()*w,rng()*h,.6+rng()*1.8,.6+rng()*2.5);
+    }
+    for(let i=0;i<165;i++){
+      const x=rng()*w,y=rng()*h;
+      ctx.strokeStyle=rng()>.5?'rgba(190,187,174,.025)':'rgba(25,30,31,.035)';
+      ctx.lineWidth=.6+rng()*2.2;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(rng()-.5)*5,y+20+rng()*95);ctx.stroke();
+    }
+  });
+  texture.wrapS=texture.wrapT=THREE.RepeatWrapping;
+  texture.anisotropy=8;
+  return texture;
+}
+
 function makeRibbon(track, offset, width, height=0, from=0, to=1, step=3) {
   const n=Math.max(2,Math.ceil((to-from)*track.length/step));
   const p=[],uv=[],indices=[];
@@ -340,8 +370,8 @@ function buildTerrain(scene,track) {
 }
 
 function buildRoad(scene,track) {
-  const asphalt=grainTexture(20,'#53575a',58);
-  const roadMat=new THREE.MeshStandardMaterial({map:asphalt,bumpMap:asphalt,bumpScale:.016,color:'#a3aaa9',roughness:.94,metalness:.025});
+  const asphalt=asphaltTexture();
+  const roadMat=new THREE.MeshStandardMaterial({map:asphalt,bumpMap:asphalt,bumpScale:.023,color:'#a3aaa9',roughness:.94,metalness:.025});
   const roadMesh=new THREE.Mesh(makeRibbon(track,0,track.width,.02),roadMat);roadMesh.receiveShadow=true;scene.add(roadMesh);
   const edgeMat=new THREE.MeshStandardMaterial({color:'#e6e3d0',roughness:.92});
   for(const side of [-1,1]){

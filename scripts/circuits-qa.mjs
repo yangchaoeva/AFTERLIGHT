@@ -21,6 +21,7 @@ try{
    }
    // Reset for full sequential-lap test; qaLocate is only a camera inspection helper.
    await page.keyboard.press('Escape');await page.locator('#restart').click();
+   await page.waitForFunction(()=>window.__afterlight.state==='racing',null,{timeout:90000});
    await page.evaluate(()=>window.__afterlight.qaDrive(660));
    const telemetry=await page.evaluate(()=>window.__afterlight.telemetry);
    assert.ok(telemetry.drivers.every(d=>d.finishTime!==null&&d.lap===2));
